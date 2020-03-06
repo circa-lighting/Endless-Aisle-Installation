@@ -1,0 +1,49 @@
+# this file installs everything on a machine named 'default' and presumes it already exists.
+docker-machine stop default
+docker-machine rm -f default
+docker-machine create -d virtualbox --virtualbox-disk-size "60000" --virtualbox-memory "8192"  --virtualbox-cpu-count "4" default
+
+#login to docker hub
+docker login --username circascreens --password Circ@2019
+
+# pull images
+docker pull datadog/agent
+docker pull couchbase
+docker pull circascreens/circa
+
+
+# create the DataDog agent (v7) container 1st 
+# This will give instight into the other containers. This has enablement for infrastructure (default), logs, and processes
+HostNameLowered="$(hostname | awk '{print tolower($0)}')"
+DataDogHostName="${HostNameLowered}-docker"
+DataDogAPIKey="9aba3015c8a90bbd912e2c447fb8fe39"
+IPAddress="192.168.99.100"
+DOCKER_CONTENT_TRUST=1 
+docker run -d --restart unless-stopped --name dd-agent \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro \
+    -v /proc/:/host/proc/:ro \
+    -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
+    -v /opt/datadog-agent/run:/opt/datadog-agent/run:rw \
+    -e DD_API_KEY=${DataDogAPIKey} \
+    -e DD_HOSTNAME=${DataDogHostName} \
+    -e DD_PROCESS_AGENT_ENABLED=true \
+    -e DD_LOGS_ENABLED=true \
+    -e DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true \
+    -e DD_AC_EXCLUDE="name:datadog-agent" \
+    datadog/agent
+
+# set up the 'nodeapp' (custom imagae for Circa) container 2nd
+docker run -dit --restart always --name nodeapp -p 80:80 -p 443:443 -h nodeapp.localdomain \
+    circascreens/circa
+
+# set up the 'db' (couchbase) container 3rd
+docker run -d --restart always --name db -p 8091-8094:8091-8094 -p 11210:11210 \
+    -v ~/opt/couchbase/var/lib/couchbase/logs/ \
+    -v ~/opt/couchbase/var/lib/couchbase/logs/*.log \
+    -l com.datadoghq.ad.check_names='[couchbase]' \
+    -l com.datadoghq.ad.init_configs='[{}]' \
+    -l com.datadoghq.ad.instances='[{"server":"http://${IPAddress}:8091","query_monitoring_url":"http://${IPAddress}:8093","username":"root","password":"docker"}]' \
+    -l com.datadoghq.ad.logs='[{"source": "couchbase", "service": "Endless-Aisle-DB"}]' \
+    couchbase
+
+# setup should now be complete
