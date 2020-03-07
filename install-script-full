@@ -42,7 +42,7 @@ docker run -d --restart always --name db -p 8091-8094:8091-8094 -p 11210:11210 \
     -v ~/opt/couchbase/var/lib/couchbase/logs/*.log \
     -l com.datadoghq.ad.check_names='[couchbase]' \
     -l com.datadoghq.ad.init_configs='[{}]' \
-    -l com.datadoghq.ad.instances='[{"server":"http://${IPAddress}:8091","username":"root","password":"docker"}]' \
+    -l com.datadoghq.ad.instances='[{"server":"http://root:docker@172.17.0.4:8091","username":"root","password":"docker"}]' \
     -l com.datadoghq.ad.logs='[{"source": "couchbase", "service": "Endless-Aisle-DB"}]' \
     couchbase
 
