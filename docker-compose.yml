@@ -1,7 +1,7 @@
 version: "2.4"
 services:
     api:
-        image: circascreens/vice-prod-test
+        image: circascreens/vice-prod-test:1.0
         container_name: nodeapp
         hostname: nodeapp.localdomain
         ports:
@@ -9,8 +9,7 @@ services:
             - 3000:3000
             - 443:443
         volumes:
-            - /data/media:/data/media
-            - ./:/data/project/NodeApp
+            - ./data/media:/data/media
     db:
         image: couchbase/server:enterprise-5.5.6
         hostname: db
